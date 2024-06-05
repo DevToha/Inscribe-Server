@@ -50,7 +50,25 @@ async function run() {
         })
 
 
-        
+        // post method for send review to the server
+
+        const reviewCollection = client.db('Assignment-12').collection('review')
+
+        app.post('/review', async (req, res) => {
+            const newReview = req.body
+            console.log(newReview)
+            const result = await reviewCollection.insertOne(newReview)
+            res.send(result)
+        })
+
+        // Get method for show review on ui
+
+        app.get('/review', async (req, res) => {
+            const cursor = reviewCollection.find()
+            const result = await cursor.toArray()
+            res.send(result)
+        })
+
 
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
