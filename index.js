@@ -1,5 +1,6 @@
 const express = require('express');
 require('dotenv').config();
+const jwt = require('jsonwebtoken');
 const cors = require('cors');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express();
@@ -45,6 +46,32 @@ async function run() {
         const userCollection = client.db('Assignment-12').collection('user');
 
 
+        // Jwt related api
+        app.post('/jwt', async (req, res) => {
+            const user = req.body;
+            const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+                expiresIn: '1h'
+            })
+            res.send({ token })
+        });
+
+        // middlewares
+        const verifyToken = (req, res, next) => {
+            console.log('inside verify Token', req.headers.authorization)
+            if (!req.headers.authorization) {
+                return res.status(401).send({ massage: 'forbidden access' })
+            }
+
+            const token = req.headers.authorization.split(' ')[1]
+
+            jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+                if (err) {
+                    return res.status(401).send({ massage: 'forbidden access' })
+                }
+                req.decoded = decoded
+                next()
+            })
+        }
 
         // Get Method For See all Study sessions
         app.get('/studySession', async (req, res) => {
@@ -106,11 +133,43 @@ async function run() {
         });
 
         // Get method for showing all user on UI
-        app.get('/user', async (req, res) => {
+        app.get('/user', verifyToken, async (req, res) => {
+            console.log(req.headers);
             const cursor = userCollection.find();
             const result = await cursor.toArray();
             res.send(result);
         });
+
+        // patch method for update user role on UI
+        app.patch('/user/admin/:id', async (req, res) => {
+            const id = req.params.id
+            const filter = { _id: new ObjectId(id) };
+            const updatedDoc = {
+                $set: {
+                    role: 'admin'
+                }
+            }
+            const result = await userCollection.updateOne(filter, updatedDoc)
+            res.send(result)
+        })
+
+        //// check admin ////
+
+        app.get('/user/admin/:email', verifyToken, async (req, res) => {
+            const email = req.params.email;
+
+            if (email !== req.decoded.email) {
+                return res.status(403).send({ message: 'forbidden access' })
+            }
+
+            const query = { email: email };
+            const user = await userCollection.findOne(query);
+            let admin = false;
+            if (user) {
+                admin = user?.role === 'admin';
+            }
+            res.send({ admin });
+        })
 
 
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
