@@ -59,18 +59,30 @@ async function run() {
         const verifyToken = (req, res, next) => {
             console.log('inside verify Token', req.headers.authorization)
             if (!req.headers.authorization) {
-                return res.status(401).send({ massage: 'forbidden access' })
+                return res.status(401).send({ massage: 'unauthorized access' })
             }
 
             const token = req.headers.authorization.split(' ')[1]
 
             jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
                 if (err) {
-                    return res.status(401).send({ massage: 'forbidden access' })
+                    return res.status(401).send({ massage: 'unauthorized access' })
                 }
                 req.decoded = decoded
                 next()
             })
+        }
+
+        // use verify admin after verifyToken
+        const verifyAdmin = async (req, res, next) => {
+            const email = req.decoded.email;
+            const query = { email: email };
+            const user = await userCollection.findOne(query);
+            const isAdmin = user?.role === 'admin';
+            if (!isAdmin) {
+                return res.status(403).send({ message: 'forbidden access' });
+            }
+            next();
         }
 
         // Get Method For See all Study sessions
@@ -133,7 +145,7 @@ async function run() {
         });
 
         // Get method for showing all user on UI
-        app.get('/user', verifyToken, async (req, res) => {
+        app.get('/user', verifyToken, verifyAdmin, async (req, res) => {
             console.log(req.headers);
             const cursor = userCollection.find();
             const result = await cursor.toArray();
@@ -141,7 +153,7 @@ async function run() {
         });
 
         // patch method for update user role on UI
-        app.patch('/user/admin/:id', async (req, res) => {
+        app.patch('/user/admin/:id', verifyToken, verifyAdmin, async (req, res) => {
             const id = req.params.id
             const filter = { _id: new ObjectId(id) };
             const updatedDoc = {
@@ -153,8 +165,21 @@ async function run() {
             res.send(result)
         })
 
-        //// check admin ////
+        // Add this route to promote a user to tutor
+        app.patch('/user/tutor/:id', verifyToken, verifyAdmin, async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: new ObjectId(id) };
+            const updatedDoc = {
+                $set: {
+                    role: 'tutor'
+                }
+            };
+            const result = await userCollection.updateOne(filter, updatedDoc);
+            res.send(result);
+        });
 
+
+        //// check admin ////
         app.get('/user/admin/:email', verifyToken, async (req, res) => {
             const email = req.params.email;
 
@@ -170,6 +195,24 @@ async function run() {
             }
             res.send({ admin });
         })
+
+
+        // Check if user is tutor
+        app.get('/user/tutor/:email', verifyToken, async (req, res) => {
+            const email = req.params.email;
+
+            if (email !== req.decoded.email) {
+                return res.status(403).send({ message: 'forbidden access' });
+            }
+
+            const query = { email: email };
+            const user = await userCollection.findOne(query);
+            let tutor = false;
+            if (user) {
+                tutor = user?.role === 'tutor';
+            }
+            res.send({ tutor });
+        });
 
 
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
