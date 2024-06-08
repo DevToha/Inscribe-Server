@@ -46,6 +46,23 @@ async function run() {
         const noteCollection = client.db('Assignment-12').collection('note');
 
         const userCollection = client.db('Assignment-12').collection('user');
+        
+        const bookedSessionCollection = client.db('Assignment-12').collection('bookedSessions');
+
+        // Post method to save booked session after payment
+        app.post('/bookedSession', async (req, res) => {
+            const bookedSession = req.body;
+            const result = await bookedSessionCollection.insertOne(bookedSession);
+            res.send(result);
+        });
+
+        // Get method to retrieve booked sessions for a specific user
+        app.get('/bookedSessions', async (req, res) => {
+            const email = req.query.email;
+            const query = { userEmail: email };
+            const result = await bookedSessionCollection.find(query).toArray();
+            res.send(result);
+        });
 
 
         // Jwt related api
