@@ -151,6 +151,20 @@ async function run() {
             res.send(sessions);
         });
 
+        // Add this route to update the status of a study session
+        app.patch('/studySession/:id', async (req, res) => {
+            const id = req.params.id;
+            const { registrationFee, status } = req.body;
+            const filter = { _id: new ObjectId(id) };
+            const updateDoc = {
+                $set: {
+                    ...(registrationFee && { registrationFee }),
+                    ...(status && { status })
+                }
+            };
+            const result = await studySessionCollection.updateOne(filter, updateDoc);
+            res.send(result);
+        });
 
         // Post method for sending review to the server
         app.post('/review', async (req, res) => {
