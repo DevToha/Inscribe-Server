@@ -46,7 +46,7 @@ async function run() {
         const noteCollection = client.db('Assignment-12').collection('note');
 
         const userCollection = client.db('Assignment-12').collection('user');
-        
+
         const bookedSessionCollection = client.db('Assignment-12').collection('bookedSessions');
 
         // Post method to save booked session after payment
@@ -136,6 +136,22 @@ async function run() {
             res.send(result);
         });
 
+        // Post method for sending new study session to the server
+        app.post('/studySession', async (req, res) => {
+            const newSession = req.body;
+            const result = await studySessionCollection.insertOne(newSession);
+            res.send(result);
+        });
+
+        // Endpoint to get study sessions by creator email
+        app.get('/studySessions', async (req, res) => {
+            const email = req.query.email;
+            const query = { creatorEmail: email };
+            const sessions = await studySessionCollection.find(query).toArray();
+            res.send(sessions);
+        });
+
+
         // Post method for sending review to the server
         app.post('/review', async (req, res) => {
             const newReview = req.body;
@@ -182,11 +198,23 @@ async function run() {
 
         // Get method for showing all user on UI
         app.get('/user', verifyToken, verifyAdmin, async (req, res) => {
-            console.log(req.headers);
-            const cursor = userCollection.find();
+            const search = req.query.search;
+            let query = {};
+
+            if (search) {
+                query = {
+                    $or: [
+                        { name: { $regex: search, $options: 'i' } },
+                        { email: { $regex: search, $options: 'i' } }
+                    ]
+                };
+            }
+
+            const cursor = userCollection.find(query);
             const result = await cursor.toArray();
             res.send(result);
         });
+
 
         // patch method for update user role on UI
         app.patch('/user/admin/:id', verifyToken, verifyAdmin, async (req, res) => {
