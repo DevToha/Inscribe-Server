@@ -154,17 +154,20 @@ async function run() {
         // Add this route to update the status of a study session
         app.patch('/studySession/:id', async (req, res) => {
             const id = req.params.id;
-            const { registrationFee, status } = req.body;
+            const { registrationFee, status, rejectionReason, feedback } = req.body;
             const filter = { _id: new ObjectId(id) };
             const updateDoc = {
                 $set: {
                     ...(registrationFee && { registrationFee }),
-                    ...(status && { status })
+                    ...(status && { status }),
+                    ...(rejectionReason && { rejectionReason }),
+                    ...(feedback && { feedback })
                 }
             };
             const result = await studySessionCollection.updateOne(filter, updateDoc);
             res.send(result);
         });
+
 
         // Post method for sending review to the server
         app.post('/review', async (req, res) => {
@@ -189,12 +192,43 @@ async function run() {
             res.send(result);
         });
 
-        // Get method for showing note on UI
+        // Get method for showing notes on UI
         app.get('/note', async (req, res) => {
-            const cursor = noteCollection.find();
-            const result = await cursor.toArray();
+            const email = req.query.email;
+            let query = {};
+
+            if (email) {
+                query = { email: email };
+            }
+
+            const notes = await noteCollection.find(query).toArray();
+            res.send(notes);
+        });
+
+        // delete method for delete note 
+        app.delete('/note/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const result = await noteCollection.deleteOne(query);
             res.send(result);
         });
+
+        // update method for update note 
+        
+        app.patch('/note/:id', async (req, res) => {
+            const id = req.params.id;
+            const { description } = req.body;
+            const query = { _id: new ObjectId(id) };
+            const updateDoc = {
+                $set: {
+                    description: description,
+                },
+            };
+            const result = await noteCollection.updateOne(query, updateDoc);
+            const updatedNote = await noteCollection.findOne(query);
+            res.send(updatedNote);
+        });
+
 
         // Post method for sending user info to the server
         app.post('/user', async (req, res) => {
