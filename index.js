@@ -154,10 +154,33 @@ async function run() {
         // Add this route to update the status of a study session
         app.patch('/studySession/:id', async (req, res) => {
             const id = req.params.id;
-            const { registrationFee, status, rejectionReason, feedback } = req.body;
+            const {
+                sessionTitle,
+                tutorName,
+                tutorEmail,
+                sessionDescription,
+                registrationStartDate,
+                registrationEndDate,
+                classStartTime,
+                classEndDate,
+                sessionDuration,
+                registrationFee,
+                status,
+                rejectionReason,
+                feedback
+            } = req.body;
             const filter = { _id: new ObjectId(id) };
             const updateDoc = {
                 $set: {
+                    ...(sessionTitle && { sessionTitle }),
+                    ...(tutorName && { tutorName }),
+                    ...(tutorEmail && { tutorEmail }),
+                    ...(sessionDescription && { sessionDescription }),
+                    ...(registrationStartDate && { registrationStartDate }),
+                    ...(registrationEndDate && { registrationEndDate }),
+                    ...(classStartTime && { classStartTime }),
+                    ...(classEndDate && { classEndDate }),
+                    ...(sessionDuration && { sessionDuration }),
                     ...(registrationFee && { registrationFee }),
                     ...(status && { status }),
                     ...(rejectionReason && { rejectionReason }),
@@ -167,6 +190,15 @@ async function run() {
             const result = await studySessionCollection.updateOne(filter, updateDoc);
             res.send(result);
         });
+
+        // delete study session 
+        app.delete('/studySession/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const result = await studySessionCollection.deleteOne(query);
+            res.send(result);
+        });
+        
 
 
         // Post method for sending review to the server
@@ -214,7 +246,7 @@ async function run() {
         });
 
         // update method for update note 
-        
+
         app.patch('/note/:id', async (req, res) => {
             const id = req.params.id;
             const { description } = req.body;
