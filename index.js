@@ -35,7 +35,7 @@ const client = new MongoClient(uri, {
 async function run() {
     try {
         // Connect the client to the server (optional starting in v4.7)
-        await client.connect();
+        // await client.connect();
 
         // all collection 
 
@@ -198,8 +198,6 @@ async function run() {
             const result = await studySessionCollection.deleteOne(query);
             res.send(result);
         });
-        
-
 
         // Post method for sending review to the server
         app.post('/review', async (req, res) => {
@@ -266,15 +264,19 @@ async function run() {
         app.post('/user', async (req, res) => {
             const newUser = req.body;
             console.log(newUser);
-            const query = { email: newUser.email }
-            const existingUser = await userCollection.findOne(query)
+
+            newUser.role = newUser.role || 'Student';
+
+            const query = { email: newUser.email };
+            const existingUser = await userCollection.findOne(query);
 
             if (existingUser) {
-                return res.send({ massage: 'user already exists', insertedId: null })
+                return res.send({ message: 'user already exists', insertedId: null });
             }
             const result = await userCollection.insertOne(newUser);
             res.send(result);
         });
+
 
         // Get method for showing all user on UI
         app.get('/user', verifyToken, verifyAdmin, async (req, res) => {
